@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Windows with Matrix Rain</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #ffffff;
+            --secondary-color: #ff0000;
+            --matrix-color1: #8B0000;
+            --matrix-color2: #808080;
+            --window-bg: rgba(255, 255, 255, 0.2);
+            --window-border: rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', sans-serif;
+            background: url('https://p4.wallpaperbetter.com/wallpaper/208/746/438/flag-flags-indonesia-indonesian-wallpaper-preview.jpg') center/cover no-repeat;
+            height: 100vh;
+            color: var(--primary-color);
+            transition: all 0.5s ease;
+        }
+
+        /* Enhanced Matrix Canvas */
+        #matrixCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        /* Theme Selector */
+        #themeSelector {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 8px 15px;
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--primary-color);
+            border: 1px solid var(--window-border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        #themeSelector:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Window Buttons */
+        .open-button {
+            position: fixed;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--primary-color);
+            border: 1px solid var(--window-border);
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #openButton1 { top: 70px; left: 20px; }
+        #openButton2 { top: 120px; left: 20px; }
+
+        .open-button:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Windows */
+        .draggable-element {
+            position: absolute;
+            width: 400px;
+            min-width: 300px;
+            height: 300px;
+            min-height: 200px;
+            background: var(--window-bg);
+            border: 1px solid var(--window-border);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+            overflow: hidden;
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10;
+        }
+
+        .draggable-element.active {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+
+        .draggable-element.maximized {
+            width: 100vw !important;
+            height: 100vh !important;
+            border-radius: 0 !important;
+        }
+
+        /* Window Header */
+        .window-header {
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.2);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .window-title {
+            font-weight: 600;
+            font-size: 1.1em;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        .window-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .window-control-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .window-control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .close-btn:hover {
+            background: #ff5f57 !important;
+            color: white !important;
+        }
+
+        /* Window Content */
+        .window-content {
+            padding: 20px;
+            height: calc(100% - 53px);
+            overflow: auto;
+            color: var(--primary-color);
+        }
+
+        /* Windows 3.11 Style */
+        #draggableElement2 {
+            background: #C0C0C0;
+            border: 2px outset #FFFFFF;
+            font-family: 'MS Sans Serif', Tahoma, sans-serif;
+            color: #000;
+            backdrop-filter: none;
+        }
+
+        #draggableElement2 .window-header {
+            background: linear-gradient(to right, #000080, #108ED0);
+            color: white;
+            border-bottom: 1px solid #000;
+        }
+
+        #draggableElement2 .window-control-btn {
+            background: #C0C0C0;
+            border: 2px outset #FFFFFF;
+            color: #000;
+            font-size: 0.9em;
+            border-radius: 0;
+        }
+
+        #draggableElement2 .window-content {
+            background: #C0C0C0;
+            color: #000;
+        }
+
+        /* Terminal Hacker Theme */
+        body.theme-terminal-hacker {
+            --primary-color: #00FF00;
+            --secondary-color: #00AA00;
+            --matrix-color1: #00FF00;
+            --matrix-color2: #00AA00;
+            --window-bg: rgba(0, 0, 0, 0.7);
+            --window-border: #00FF00;
+            background: url('https://wallpapercave.com/wp/wp8343389.jpg') center/cover no-repeat;
+        }
+
+        body.theme-terminal-hacker #matrixCanvas {
+            opacity: 0.9;
+            z-index: 0;
+        }
+
+        body.theme-terminal-hacker .draggable-element {
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        body.theme-terminal-hacker .window-header {
+            background: rgba(0, 30, 0, 0.7);
+            border-bottom: 1px solid var(--window-border);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="matrixCanvas"></canvas>
+
+    <select id="themeSelector">
+        <option value="merah-putih">Merah Putih</option>
+        <option value="terminal-hacker">Terminal Hacker</option>
+    </select>
+
+    <button id="openButton1" class="open-button">Modern Window</button>
+    <button id="openButton2" class="open-button">Win 3.11 Style</button>
+
+    <div id="draggableElement1" class="draggable-element">
+        <div class="window-header">
+            <div class="window-title">Modern Window</div>
+            <div class="window-controls">
+                <button class="window-control-btn minimize-btn"><i class="fas fa-minus"></i></button>
+                <button class="window-control-btn maximize-btn"><i class="fas fa-square"></i></button>
+                <button class="window-control-btn close-btn"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="window-content">
+            <p>Drag me around!</p>
+            <p>Try maximizing or minimizing.</p>
+            <p>Change themes using the selector.</p>
+        </div>
+    </div>
+
+    <div id="draggableElement2" class="draggable-element">
+        <div class="window-header">
+            <div class="window-title">Program Manager</div>
+            <div class="window-controls">
+                <button class="window-control-btn minimize-btn"><i class="fas fa-minus"></i></button>
+                <button class="window-control-btn maximize-btn"><i class="fas fa-square"></i></button>
+                <button class="window-control-btn close-btn"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="window-content">
+            <p>Welcome to Windows 3.11</p>
+            <p>Classic window style</p>
+            <p>Try dragging and resizing</p>
+        </div>
+    </div>
+
+    <script>
+        // ======================
+        // Enhanced Matrix Rain
+        // ======================
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Matrix configuration
+        const matrixConfig = {
+            chars: 'アァカサタナハマヤャラワガザダバパピビヂヅグェケセテネヘメレヱヰギジヂズヅゲゼデベペポボドゴショコソトノンンABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+            fontSize: 18,
+            columns: 0,
+            drops: [],
+            colors: ['#8B0000', '#A00000', '#800000', '#600000'],
+            speed: 30,
+            trailingRatio: 0.97
+        };
+
+        function initMatrix() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            matrixConfig.columns = Math.floor(canvas.width / matrixConfig.fontSize);
+            matrixConfig.drops = Array(matrixConfig.columns).fill(1);
+            
+            // Adjust colors based on theme
+            if (document.body.classList.contains('theme-terminal-hacker')) {
+                matrixConfig.colors = ['#00FF00', '#00CC00', '#009900', '#00AA00'];
+            }
+        }
+
+        function drawMatrix() {
+            // Fading effect
+            ctx.fillStyle = `rgba(0, 0, 0, ${1 - matrixConfig.trailingRatio})`;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.font = `${matrixConfig.fontSize}px monospace`;
+            
+            for (let i = 0; i < matrixConfig.columns; i++) {
+                const text = matrixConfig.chars.charAt(Math.floor(Math.random() * matrixConfig.chars.length));
+                const colorIndex = Math.floor(Math.random() * matrixConfig.colors.length);
+                
+                ctx.fillStyle = matrixConfig.colors[colorIndex];
+                ctx.fillText(text, i * matrixConfig.fontSize, matrixConfig.drops[i] * matrixConfig.fontSize);
+                
+                if (matrixConfig.drops[i] * matrixConfig.fontSize > canvas.height && Math.random() > 0.975) {
+                    matrixConfig.drops[i] = 0;
+                }
+                
+                matrixConfig.drops[i]++;
+            }
+        }
+
+        // ======================
+        // Window Management
+        // ======================
+        let highestZIndex = 100;
+        const windows = [];
+
+        class Window {
+            constructor(elementId, buttonId) {
+                this.element = document.getElementById(elementId);
+                this.button = document.getElementById(buttonId);
+                this.header = this.element.querySelector('.window-header');
+                this.isDragging = false;
+                this.isMaximized = false;
+                this.dragOffset = { x: 0, y: 0 };
+                this.lastState = {};
+                
+                this.init();
+                windows.push(this);
+            }
+            
+            init() {
+                this.setInitialPosition();
+                this.addEventListeners();
+                this.button.dataset.originalText = this.button.innerHTML;
+            }
+            
+            setInitialPosition() {
+                const centerX = (window.innerWidth - this.element.offsetWidth) / 2;
+                const centerY = (window.innerHeight - this.element.offsetHeight) / 2;
+                
+                this.element.style.left = `${centerX}px`;
+                this.element.style.top = `${centerY}px`;
+                
+                this.lastState = {
+                    left: this.element.style.left,
+                    top: this.element.style.top,
+                    width: this.element.style.width,
+                    height: this.element.style.height
+                };
+            }
+            
+            bringToFront() {
+                highestZIndex++;
+                this.element.style.zIndex = highestZIndex;
+            }
+            
+            toggle() {
+                if (this.element.classList.contains('active')) {
+                    this.close();
+                } else {
+                    this.open();
+                }
+            }
+            
+            open() {
+                this.element.classList.add('active');
+                this.bringToFront();
+            }
+            
+            close() {
+                this.element.classList.remove('active');
+                this.setInitialPosition();
+            }
+            
+            minimize() {
+                this.lastState = {
+                    left: this.element.style.left,
+                    top: this.element.style.top,
+                    width: this.element.style.width,
+                    height: this.element.style.height
+                };
+                
+                this.element.classList.remove('active');
+            }
+            
+            maximize() {
+                if (this.isMaximized) {
+                    this.element.classList.remove('maximized');
+                    Object.assign(this.element.style, this.lastState);
+                } else {
+                    this.lastState = {
+                        left: this.element.style.left,
+                        top: this.element.style.top,
+                        width: this.element.style.width,
+                        height: this.element.style.height
+                    };
+                    
+                    this.element.classList.add('maximized');
+                    this.element.style.left = '0';
+                    this.element.style.top = '0';
+                    this.element.style.width = '100vw';
+                    this.element.style.height = '100vh';
+                }
+                
+                this.isMaximized = !this.isMaximized;
+            }
+            
+            addEventListeners() {
+                // Button click
+                this.button.addEventListener('click', () => this.toggle());
+                
+                // Header drag
+                this.header.addEventListener('mousedown', (e) => {
+                    if (e.target.closest('.window-control-btn') || this.isMaximized) return;
+                    
+                    this.isDragging = true;
+                    this.dragOffset = {
+                        x: e.clientX - this.element.getBoundingClientRect().left,
+                        y: e.clientY - this.element.getBoundingClientRect().top
+                    };
+                    this.bringToFront();
+                });
+                
+                // Window controls
+                this.element.querySelector('.minimize-btn').addEventListener('click', () => this.minimize());
+                this.element.querySelector('.maximize-btn').addEventListener('click', () => this.maximize());
+                this.element.querySelector('.close-btn').addEventListener('click', () => this.close());
+            }
+        }
+
+        // ======================
+        // Theme Management
+        // ======================
+        function applyTheme(themeName) {
+            document.body.className = `theme-${themeName}`;
+            
+            // Update matrix colors
+            if (themeName === 'terminal-hacker') {
+                matrixConfig.colors = ['#00FF00', '#00CC00', '#009900', '#00AA00'];
+            } else {
+                matrixConfig.colors = ['#8B0000', '#A00000', '#800000', '#600000'];
+            }
+        }
+
+        // ======================
+        // Initialize Everything
+        // ======================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize matrix
+            initMatrix();
+            setInterval(drawMatrix, 1000 / matrixConfig.speed);
+            
+            // Initialize windows
+            new Window('draggableElement1', 'openButton1');
+            new Window('draggableElement2', 'openButton2');
+            
+            // Theme selector
+            document.getElementById('themeSelector').addEventListener('change', (e) => {
+                applyTheme(e.target.value);
+            });
+            
+            // Window drag handling
+            document.addEventListener('mousemove', (e) => {
+                windows.forEach(win => {
+                    if (win.isDragging && !win.isMaximized) {
+                        win.element.style.left = `${e.clientX - win.dragOffset.x}px`;
+                        win.element.style.top = `${e.clientY - win.dragOffset.y}px`;
+                    }
+                });
+            });
+            
+            document.addEventListener('mouseup', () => {
+                windows.forEach(win => win.isDragging = false);
+            });
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                initMatrix();
+                windows.forEach(win => {
+                    if (win.isMaximized) {
+                        win.element.style.width = '100vw';
+                        win.element.style.height = '100vh';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
